@@ -1,0 +1,90 @@
+---
+title: "Chapter 1: Exploratory Data Analysis"
+author: "Morgan Grovenburg"
+date: "5/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, warning=FALSE, message=FALSE}
+# if (!require(tidyverse)) install.packages('tidyverse')
+# if (!require(dslabs)) install.packages('dslabs')
+# if (!require(vioplot)) install.packages('vioplot')
+# if (!require(corrplot)) install.packages('corrplot')
+# if (!require(gmodels)) install.packages('gmodels')
+# if (!require(matrixStats)) install.packages('matrixStats')
+
+library(tidyverse)
+library(dslabs)
+library(matrixStats)
+```
+
+
+# Estimates of Location
+
+## Example: Location Estimates of Population and Murder Rates
+
+```{r}
+# setting up data similar to the book
+state <- murders %>%
+  # murder rates (in units of murders per 100,000 people per year)
+  mutate(murder_rate = total/population*100000) %>%
+  select(state, population, murder_rate, abb)
+# First 8 rows of the data
+head(state, n = 8L)
+```
+
+### Compute the mean, trimmed mean, and median for the population
+
+#### Mean
+
+```{r}
+# the book's code
+mean(state[['population']])
+# alternative
+mean(state$population)
+```
+
+#### Trimmed Mean
+
+```{r}
+# the book's code
+mean(state[['population']], trim = 0.1)
+# alternative
+mean(state$population, trim = 0.1)
+```
+
+#### Median
+
+```{r}
+# the book's code
+median(state[['population']])
+# alternative
+median(state$population)
+```
+
+### Compute the weighted mean and median murder rate for the country
+
+#### Weighted Mean
+
+```{r}
+# the book's code
+weighted.mean(state[['murder_rate']], w=state[['population']])
+# alternative
+weighted.mean(state$murder_rate, w = state$population)
+```
+
+#### Weighted Median
+
+```{r}
+# the book's code
+matrixStats::weightedMedian(state[['murder_rate']], w=state[['population']])
+# alternative
+matrixStats::weightedMedian(state$murder_rate, w = state$population)
+```
+
+# Estimates of Variability
+

@@ -1,0 +1,141 @@
+---
+title: "Chapter 4"
+author: "Morgan Grovenburg"
+date: "6/21/2021"
+output: bookdown::gitbook
+---
+
+# Regression and Prediction
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+library(MASS)
+library(lubridate)
+```
+
+## Simple Linear Regression
+
+### The Regression Equation
+
+$Y = b_{0} + b_{1}X$
+
+```{r, message=FALSE}
+lung <- read_csv(here("data", "LungDisease.csv"))
+lung %>%
+  ggplot(aes(Exposure, PEFR)) +
+  geom_point() +
+  theme_classic()
+```
+
+$PEFR = b_{0} + b_{1}Exposure$
+
+```{r}
+# With intercept
+model <- lm(PEFR ~ Exposure, data = lung)
+model
+
+# Exclude intercept
+model1 <- lm(PEFR ~ Exposure - 1, data = lung)
+model1
+```
+
+```{r}
+
+plot(lung$Exposure, lung$PEFR, xlab="Exposure", ylab="PEFR", ylim=c(300,450), type="n", xaxs="i")
+abline(a=model$coefficients[1], b=model$coefficients[2], col="blue", lwd=2)
+text(x=.3, y=model$coefficients[1], labels=expression("b"[0]),  adj=0, cex=1.5)
+x <- c(7.5, 17.5)
+y <- predict(model, newdata=data.frame(Exposure=x))
+segments(x[1], y[2], x[2], y[2] , col="red", lwd=2, lty=2)
+segments(x[1], y[1], x[1], y[2] , col="red", lwd=2, lty=2)
+text(x[1], mean(y), labels=expression(Delta~Y), pos=2, cex=1.5)
+text(mean(x), y[2], labels=expression(Delta~X), pos=1, cex=1.5)
+text(mean(x), 400, labels=expression(b[1] == frac(Delta ~ Y, Delta ~ X)), cex=1.5)
+```
+
+
+### Fitted Values and Residuals
+
+Original data:
+
+$Y_{i} = b_{0} + b_{1}X{i} + e_{i}$
+
+Predicted Values:
+
+$\hat Y_{i} = \hat b_{0} = \hat b_{1}X_{i}$
+
+Residuals:
+$\hat e_{i} = Y_{i} - \hat Y_{i}$
+
+```{r}
+fitted <- predict(model)
+resid <- residuals(model)
+```
+
+```{r}
+lung1 <- lung %>%
+  mutate(Fitted=fitted,
+         positive = PEFR>Fitted) %>%
+  group_by(Exposure, positive) %>%
+  summarize(PEFR_max = max(PEFR), 
+            PEFR_min = min(PEFR),
+            Fitted = first(Fitted)) %>%
+  ungroup() %>%
+  mutate(PEFR = ifelse(positive, PEFR_max, PEFR_min)) %>%
+  arrange(Exposure)
+```
+
+```{r}
+plot(lung$Exposure, lung$PEFR, xlab="Exposure", ylab="PEFR")
+abline(a=model$coefficients[1], b=model$coefficients[2], col="blue", lwd=2)
+segments(lung1$Exposure, lung1$PEFR, lung1$Exposure, lung1$Fitted, col="red", lty=3)
+```
+
+
+## Multiple Linear Regression
+
+### Example: King County Housing Data
+
+```{r}
+# PSDS_PATH <- file.path(dirname(dirname(getwd())))
+# house <- read.csv(file.path(PSDS_PATH, 'data', 'house_sales.csv'), sep='\t')
+
+house <- read_tsv(here("data", "house_sales.csv"))
+
+print(head(house[, c('AdjSalePrice', 'SqFtTotLiving', 'SqFtLot', 'Bathrooms', 
+               'Bedrooms', 'BldgGrade')]))
+
+house_lm <- lm(AdjSalePrice ~ SqFtTotLiving + SqFtLot + Bathrooms + 
+                 Bedrooms + BldgGrade,  
+               data=house, na.action=na.omit)
+
+house_lm
+```
+
+### Assessing the Model
+
+```{r}
+summary(house_lm)
+```
+
+### Model Selection and Stepwise Regression
+
+```{r}
+house_full <- lm(AdjSalePrice ~ SqFtTotLiving + SqFtLot + Bathrooms + 
+                   Bedrooms + BldgGrade + PropertyType + NbrLivingUnits + 
+                   SqFtFinBasement + YrBuilt + YrRenovated + NewConstruction,
+                 data=house, na.action=na.omit)
+```
+
+```{r}
+step_lm <- stepAIC(house_full, direction="both")
+step_lm
+
+lm(AdjSalePrice ~  Bedrooms, data=house)
+```
+
